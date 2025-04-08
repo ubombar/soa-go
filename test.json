@@ -1,0 +1,66 @@
+[
+  {
+    "id": 859,
+    "locator": "",
+    "suppressAuthor": false,
+    "prefix": "",
+    "suffix": "",
+    "label": "",
+    "citationKey": "cunhaDTRACKSystemPredict2014a",
+    "itemType": "article-journal",
+    "title": "DTRACK: a system to predict and track internet path changes",
+    "item": {
+      "version": 845,
+      "itemType": "journalArticle",
+      "title": "DTRACK: a system to predict and track internet path changes",
+      "abstractNote": "In this paper, we implement and evaluate a system that predicts and tracks Internet path changes to maintain an up-to-date network topology. Based on empirical observations, we claim that monitors can enhance probing according to the likelihood of path changes. We design a simple predictor of path changes and show that it can be used to enhance probe targeting. Our path tracking system, called DTRACK, focuses probes on unstable paths and spreads probes over time to minimize the chances of missing path changes. Our evaluations of DTRACK with trace-driven simulations and with a prototype show that DTRACK can detect up to three times more path changes than traditional traceroute-based topology mapping techniques.",
+      "date": "August 1, 2014",
+      "shortTitle": "DTRACK",
+      "libraryCatalog": "ACM Digital Library",
+      "url": "https://doi.org/10.1109/TNET.2013.2269837",
+      "accessDate": "2025-04-07T18:03:25Z",
+      "volume": "22",
+      "pages": "1025–1038",
+      "publicationTitle": "IEEE/ACM Trans. Netw.",
+      "DOI": "10.1109/TNET.2013.2269837",
+      "issue": "4",
+      "ISSN": "1063-6692",
+      "creators": [
+        {
+          "firstName": "Ítalo",
+          "lastName": "Cunha",
+          "creatorType": "author"
+        },
+        {
+          "firstName": "Renata",
+          "lastName": "Teixeira",
+          "creatorType": "author"
+        },
+        {
+          "firstName": "Darryl",
+          "lastName": "Veitch",
+          "creatorType": "author"
+        },
+        {
+          "firstName": "Christophe",
+          "lastName": "Diot",
+          "creatorType": "author"
+        }
+      ],
+      "tags": [],
+      "collections": [
+        "XC6HL952"
+      ],
+      "relations": {},
+      "dateAdded": "2025-04-07T18:03:25Z",
+      "dateModified": "2025-04-07T18:03:25Z",
+      "uri": "http://zotero.org/users/15808929/items/ULLPIUQG",
+      "citationKey": "cunhaDTRACKSystemPredict2014a",
+      "itemID": 859,
+      "itemKey": "ULLPIUQG",
+      "libraryID": 1,
+      "attachments": []
+    }
+  }
+]
+
