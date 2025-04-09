@@ -1,42 +1,51 @@
-package buffer
+package client
 
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 	"reflect"
 
 	"github.com/iancoleman/strcase"
 	"gopkg.in/yaml.v3"
+
+	"github.com/ubombar/soa/api"
+	"github.com/ubombar/soa/internal/util"
 )
 
 const (
-	HeaderSeperator = "--"
+	headerSeperator = "--"
 	UnknownKind     = "unknown" // special key that persists
 )
+
+var ErrCannotSaveInMemoryBuffer = errors.New("cannot save in memory buffer")
 
 type Buffer struct {
 	Content *bytes.Buffer  // Raw contents of the buffer
 	Header  map[string]any // Raw header
+	Origin  string
 }
 
-func NewBuffer() *Buffer {
+func (c *BufferClient) NewBuffer() *Buffer {
 	return &Buffer{
 		Content: new(bytes.Buffer),
 		Header:  map[string]any{"kind": UnknownKind},
+		Origin:  "", // empty means in memory
 	}
 }
 
-func FromFile(filename string) (*Buffer, error) {
+func (c *BufferClient) NewBufferFromFile(filename string, create bool) (*Buffer, error) {
 	var f *os.File
 	var err error
 
-	if _, err = os.Stat(filename); os.IsNotExist(err) {
+	if util.FileExists(filename) {
+		f, err = os.Open(filename)
+	} else if create {
 		f, err = os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
 	} else {
-		f, err = os.Open(filename)
+		return nil, os.ErrNotExist
 	}
 
 	if err != nil {
@@ -45,18 +54,30 @@ func FromFile(filename string) (*Buffer, error) {
 
 	defer f.Close()
 
-	b := NewBuffer()
+	b := c.NewBuffer()
 
-	if err := b.FromReader(f); err != nil {
-		fmt.Printf("err: %v\n", err)
-
+	if err := b.read(f); err != nil {
 		return nil, err
 	}
-
+	b.Origin = filename // set the origin
 	return b, nil
 }
 
-func (b *Buffer) FromReader(f io.Reader) error {
+func (c *BufferClient) SaveBuffer(b *Buffer) error {
+	if b.Origin == "" {
+		return ErrCannotSaveInMemoryBuffer
+	}
+
+	f, err := os.Create(b.Origin)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return b.write(f)
+}
+
+func (b *Buffer) read(f io.Reader) error {
 	var headerBuffer bytes.Buffer
 	var contentBuffer bytes.Buffer
 
@@ -73,15 +94,15 @@ func (b *Buffer) FromReader(f io.Reader) error {
 		text := scanner.Text()
 
 		// does not contain header
-		if lineNum == 1 && text != HeaderSeperator {
+		if lineNum == 1 && text != headerSeperator {
 			noHeader = true
 			inContent = true
-		} else if lineNum == 1 && text == HeaderSeperator {
+		} else if lineNum == 1 && text == headerSeperator {
 			noHeader = false
 			inContent = false
 			lineNum++
 			continue
-		} else if lineNum != 1 && text == HeaderSeperator && !noHeader {
+		} else if lineNum != 1 && text == headerSeperator && !noHeader {
 			inContent = true
 			lineNum++
 			continue
@@ -131,21 +152,11 @@ func (b *Buffer) FromReader(f io.Reader) error {
 	return nil
 }
 
-func ToFile(b *Buffer, filename string) error {
-	f, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	return b.ToWriter(f)
-}
-
-func (b *Buffer) ToWriter(f io.Writer) error {
+func (b *Buffer) write(f io.Writer) error {
 	writer := bufio.NewWriter(f)
 
 	// Write first header separator
-	if _, err := writer.WriteString(HeaderSeperator + "\n"); err != nil {
+	if _, err := writer.WriteString(headerSeperator + "\n"); err != nil {
 		return err
 	}
 
@@ -159,7 +170,7 @@ func (b *Buffer) ToWriter(f io.Writer) error {
 	}
 
 	// Write second header separator
-	if _, err := writer.WriteString(HeaderSeperator + "\n"); err != nil {
+	if _, err := writer.WriteString(headerSeperator + "\n"); err != nil {
 		return err
 	}
 
@@ -171,7 +182,7 @@ func (b *Buffer) ToWriter(f io.Writer) error {
 	return writer.Flush()
 }
 
-func (b *Buffer) ReadHeader(obj any, preferStruct bool) error {
+func (b *Buffer) readHeader(obj any, preferStruct bool) error {
 	v := reflect.ValueOf(obj)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
 		return &reflect.ValueError{Method: "PopulateStructFromMap", Kind: v.Kind()}
@@ -224,7 +235,7 @@ func (b *Buffer) ReadHeader(obj any, preferStruct bool) error {
 	return nil
 }
 
-func (b *Buffer) WriteHeader(obj any, preferMap bool) error {
+func (b *Buffer) writeHeader(obj any, preferMap bool, kind string) error {
 	v := reflect.ValueOf(obj)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -257,5 +268,22 @@ func (b *Buffer) WriteHeader(obj any, preferMap bool) error {
 		}
 	}
 
+	b.Header["kind"] = kind
+
+	return nil
+}
+
+func GetHeader[T api.Kinder](b *Buffer) (T, error) {
+	var header T
+	if err := b.readHeader(&header, false); err != nil {
+		return header, err
+	}
+	return header, nil
+}
+
+func SetHeader[T api.Kinder](b *Buffer, header T) error {
+	if err := b.writeHeader(&header, false, header.Kind()); err != nil {
+		return err
+	}
 	return nil
 }

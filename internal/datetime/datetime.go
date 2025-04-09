@@ -12,6 +12,10 @@ type Date struct {
 	time.Time
 }
 
+func (ct Date) String() string {
+	return ct.Format(customDateFormat)
+}
+
 func (ct Date) MarshalYAML() (interface{}, error) {
 	return ct.Format(customDateFormat), nil
 }
@@ -29,6 +33,10 @@ const customDateTimeFormat = "2006-01-02 15:04:05"
 
 type DateTime struct {
 	time.Time
+}
+
+func (ct DateTime) String() string {
+	return ct.Format(customDateTimeFormat)
 }
 
 func (ct DateTime) MarshalYAML() (interface{}, error) {

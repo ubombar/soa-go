@@ -10,6 +10,7 @@ import (
 
 	"github.com/ubombar/soa/internal/add"
 	"github.com/ubombar/soa/internal/log"
+	"github.com/ubombar/soa/internal/sync"
 )
 
 var logger = log.GlobalLogger
@@ -30,6 +31,7 @@ func main() {
 
 	// add other commands
 	rootCmd.AddCommand(add.AddCmd())
+	rootCmd.AddCommand(sync.SyncCmd())
 
 	// bind variables to viper
 	viper.BindPFlags(rootCmd.PersistentFlags())

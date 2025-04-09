@@ -2,16 +2,14 @@ package add
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
-	"github.com/ubombar/soa/api"
-	"github.com/ubombar/soa/internal/buffer"
-	"github.com/ubombar/soa/internal/config"
-	"github.com/ubombar/soa/internal/datetime"
 	"github.com/ubombar/soa/internal/log"
-	"github.com/ubombar/soa/internal/util"
+	"github.com/ubombar/soa/pkg/client"
 )
 
 func AddCmd() *cobra.Command {
@@ -23,6 +21,7 @@ func AddCmd() *cobra.Command {
 		Args:    addCmdArgs,
 		Run:     addCmd,
 	}
+	addCmd.PersistentFlags().StringP("from", "f", "", "populate the from field in question header")
 
 	addQuestionCmd := &cobra.Command{
 		Use:     "question",
@@ -66,6 +65,9 @@ func AddCmd() *cobra.Command {
 	addCmd.AddCommand(addMeetingCmd)
 	addCmd.AddCommand(addPermentantCmd)
 
+	// bind to viper
+	viper.BindPFlags(addCmd.PersistentFlags())
+
 	return addCmd
 }
 
@@ -81,36 +83,21 @@ func addCmdArgs(cmd *cobra.Command, args []string) error {
 func addQuestionCmd(cmd *cobra.Command, args []string) {
 	logger := log.GlobalLogger
 	rawTitle := strings.Join(args, "")
-	sanitizedTitle, err := util.SanitizeName(fmt.Sprintf("Q %s.md", rawTitle))
+	fromFile := viper.GetString("from")
+
+	bclient, err := client.NewBufferClient(nil)
+	if err != nil {
+		logger.Fatalf("cannot create buffer client: %v.\n", err)
+		os.Exit(1)
+	}
+
+	questionBuffer, err := bclient.NewQuestion(rawTitle, fromFile, false)
 	if err != nil {
 		logger.Fatalf("cannot create question: %v.\n", err)
-		return
+		os.Exit(1)
 	}
 
-	filep := util.GetFilename(config.DefaultQuestionsFolder, sanitizedTitle)
-	buff, err := buffer.FromFile(filep)
-	if err != nil {
-		logger.Fatalf("cannot create question: %v.\n", err)
-		return
-	}
-	quesionHeader, err := api.QuestionFromBuffer(buff)
-	if err != nil {
-		logger.Fatalf("cannot read question header: %v.\n", err)
-		return
-	}
-
-	quesionHeader.Created = datetime.CurrentDate()
-	quesionHeader.Question = rawTitle
-	quesionHeader.From = ""
-
-	if err := buff.WriteHeader(quesionHeader, false); err != nil {
-		logger.Fatalf("cannot write question header: %v.\n", err)
-		return
-	}
-
-	buffer.ToFile(buff, filep)
-
-	fmt.Printf("%s\n", filep)
+	fmt.Printf("%s\n", questionBuffer.Origin)
 }
 
 func addQuestionCmdArgs(cmd *cobra.Command, args []string) error {
